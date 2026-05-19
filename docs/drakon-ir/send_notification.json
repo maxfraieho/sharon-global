@@ -1,0 +1,104 @@
+{
+  "name": "send_notification",
+  "params": "text: str, reason: str, cfg: dict, channel_name: str=''",
+  "items": {
+    "end": {
+      "type": "end"
+    },
+    "n1": {
+      "type": "action",
+      "content": "'Send alert via Telegram Bot API (with dedup cooldown).'\nglobal _last_notify_time, _last_notify_level, _active_threat\nimport time\nnow = time.monotonic()\nelapsed = now - _last_notify_time\nlevel = _infer_level(text, reason)",
+      "one": "q2"
+    },
+    "q2": {
+      "type": "question",
+      "content": "elapsed < _NOTIFY_COOLDOWN_SEC and level <= _last_notify_level?",
+      "one": "n3",
+      "two": "q6"
+    },
+    "n3": {
+      "type": "action",
+      "content": "log.info(f'[dedup] suppressed L{level}<=L{_last_notify_level} elapsed={elapsed:.0f}s: {reason}')",
+      "one": "n4"
+    },
+    "n4": {
+      "type": "action",
+      "content": "return",
+      "one": "end"
+    },
+    "q6": {
+      "type": "question",
+      "content": "level > _last_notify_level?",
+      "one": "n7",
+      "two": "n9"
+    },
+    "n7": {
+      "type": "action",
+      "content": "log.info(f'[dedup] escalation L{_last_notify_level}→L{level}, bypass cooldown')",
+      "one": "n9"
+    },
+    "n9": {
+      "type": "action",
+      "content": "_last_notify_time = now\n_last_notify_level = level\ncity = cfg.get('city', 'ВашеМісто').upper()\nsafe_text = text.replace('_', '\\\\_').replace('*', '\\\\*').replace('[', '\\\\[').replace('`', '\\\\`')",
+      "one": "q10"
+    },
+    "q10": {
+      "type": "question",
+      "content": "level >= 3?",
+      "one": "n11",
+      "two": "q13"
+    },
+    "n11": {
+      "type": "action",
+      "content": "header = f'🔴 *КРИТИЧНО — {city}*'\naction = '\\n\\n⚠️ _Негайно в укриття!_'",
+      "one": "q17"
+    },
+    "q13": {
+      "type": "question",
+      "content": "level == 2?",
+      "one": "n14",
+      "two": "n16"
+    },
+    "n14": {
+      "type": "action",
+      "content": "header = f'🚨 *ЗАГРОЗА — {city}*'\naction = ''",
+      "one": "q17"
+    },
+    "n16": {
+      "type": "action",
+      "content": "header = f'⚠️ *МОНІТОРИНГ — {city}*'\naction = ''",
+      "one": "q17"
+    },
+    "q17": {
+      "type": "question",
+      "content": "level >= 2 and channel_name?",
+      "one": "n18",
+      "two": "n20"
+    },
+    "n18": {
+      "type": "action",
+      "content": "cite = f'\\n📡 _{channel_name}:_\\n{safe_text}'",
+      "one": "n21"
+    },
+    "n20": {
+      "type": "action",
+      "content": "cite = f'\\n{safe_text}'",
+      "one": "n21"
+    },
+    "n21": {
+      "type": "action",
+      "content": "msg = f'{header}{cite}\\n\\n_Аналіз: {reason}_{action}'",
+      "one": "n22"
+    },
+    "n22": {
+      "type": "action",
+      "content": "try:\n    async with httpx.AsyncClient(timeout=10.0) as client:\n        resp = await client.post(f\"https://api.telegram.org/bot{cfg['bot_token']}/sendMessage\", json={'chat_id': cfg['notify_chat_id'], 'text': msg, 'parse_mode': 'Markdown'})\n        resp.raise_for_status()\n        _active_threat = True\n        _save_threat_state(True)\n        log.info(f'Notification sent L{level}: {reason}')\nexcept Exception as e:\n    log.error(f'Send notification error: {e}')",
+      "one": "end"
+    },
+    "b0": {
+      "type": "branch",
+      "branchId": 0,
+      "one": "n1"
+    }
+  }
+}

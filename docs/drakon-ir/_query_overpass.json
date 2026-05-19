@@ -1,0 +1,24 @@
+{
+  "name": "_query_overpass",
+  "params": "lat: float, lon: float, radius_m: int=2000",
+  "items": {
+    "end": {
+      "type": "end"
+    },
+    "n1": {
+      "type": "action",
+      "content": "'Overpass: вибірка тільки реальних укриттів (не газони і зупинки).'\nquery = f'[out:json][timeout:25];\\n(  node[\"civil_defence\"=\"shelter\"](around:{radius_m},{lat},{lon});\\n  node[\"emergency\"=\"shelter\"](around:{radius_m},{lat},{lon});\\n  node[\"building\"=\"bunker\"](around:{radius_m},{lat},{lon});\\n  node[\"amenity\"=\"shelter\"][\"shelter_type\"!=\"picnic_shelter\"][\"shelter_type\"!=\"public_transport\"][\"shelter_type\"!=\"gazebo\"][\"shelter_type\"!=\"lean_to\"](around:{radius_m},{lat},{lon});\\n  way[\"civil_defence\"=\"shelter\"](around:{radius_m},{lat},{lon});\\n  way[\"amenity\"=\"shelter\"][\"shelter_type\"!=\"picnic_shelter\"][\"shelter_type\"!=\"public_transport\"](around:{radius_m},{lat},{lon});\\n);\\nout tags center;'",
+      "one": "n2"
+    },
+    "n2": {
+      "type": "action",
+      "content": "try:\n    data = urllib.parse.urlencode({'data': query}).encode()\n    req = urllib.request.Request(OVERPASS_URL, data=data, headers={'User-Agent': 'UAVWatcher/1.0 (family safety)'})\n    with urllib.request.urlopen(req, timeout=30) as resp:\n        result = json.loads(resp.read())\n    out = []\n    for el in result.get('elements', []):\n        tags = el.get('tags', {})\n        stype = tags.get('shelter_type', tags.get('building', 'shelter'))\n        if stype in _SKIP_TYPES:\n            continue\n        slat = el.get('lat') or el.get('center', {}).get('lat')\n        slon = el.get('lon') or el.get('center', {}).get('lon')\n        if slat and slon:\n            out.append({'lat': slat, 'lon': slon, 'name': tags.get('name:uk') or tags.get('name') or '', 'type': stype, 'source': 'osm', 'address': ''})\n    return out\nexcept Exception as e:\n    log.warning(f'Overpass shelter query error: {e}')\n    return []",
+      "one": "end"
+    },
+    "b0": {
+      "type": "branch",
+      "branchId": 0,
+      "one": "n1"
+    }
+  }
+}

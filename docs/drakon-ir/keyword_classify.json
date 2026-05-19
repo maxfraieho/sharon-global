@@ -1,0 +1,62 @@
+{
+  "name": "keyword_classify",
+  "params": "text: str, city_keywords: list[str]",
+  "items": {
+    "end": {
+      "type": "end"
+    },
+    "n1": {
+      "type": "action",
+      "content": "'\\n    Fast keyword pre-classifier.\\n    Returns (True, reason) for clear threat, (False, reason) for clear allclear,\\n    or (None, \"\") if ambiguous — let AI decide.\\n    '\ntl = text.lower()",
+      "one": "q2"
+    },
+    "q2": {
+      "type": "question",
+      "content": "_ALLCLEAR_PATTERNS.search(text)?",
+      "one": "n3",
+      "two": "n5"
+    },
+    "n3": {
+      "type": "action",
+      "content": "return (False, 'відбій (ключове слово)')",
+      "one": "end"
+    },
+    "n5": {
+      "type": "action",
+      "content": "city_hit = any((kw.lower() in tl for kw in city_keywords))",
+      "one": "q6"
+    },
+    "q6": {
+      "type": "question",
+      "content": "city_hit and _THREAT_PATTERNS.search(text)?",
+      "one": "n7",
+      "two": "q9"
+    },
+    "n7": {
+      "type": "action",
+      "content": "return (True, f'БПЛА загроза (ключові слова)')",
+      "one": "end"
+    },
+    "q9": {
+      "type": "question",
+      "content": "city_hit and _AIRARAID_PATTERNS.search(text)?",
+      "one": "n10",
+      "two": "n12"
+    },
+    "n10": {
+      "type": "action",
+      "content": "return (True, 'повітряна тривога у місті')",
+      "one": "end"
+    },
+    "n12": {
+      "type": "action",
+      "content": "return (None, '')",
+      "one": "end"
+    },
+    "b0": {
+      "type": "branch",
+      "branchId": 0,
+      "one": "n1"
+    }
+  }
+}

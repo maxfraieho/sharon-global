@@ -1,0 +1,24 @@
+{
+  "name": "_haversine",
+  "params": "lat1, lon1, lat2, lon2",
+  "items": {
+    "end": {
+      "type": "end"
+    },
+    "n1": {
+      "type": "action",
+      "content": "R = 6371000\ndlat = math.radians(lat2 - lat1)\ndlon = math.radians(lon2 - lon1)\na = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2",
+      "one": "n2"
+    },
+    "n2": {
+      "type": "action",
+      "content": "return int(R * 2 * math.asin(math.sqrt(a)))",
+      "one": "end"
+    },
+    "b0": {
+      "type": "branch",
+      "branchId": 0,
+      "one": "n1"
+    }
+  }
+}

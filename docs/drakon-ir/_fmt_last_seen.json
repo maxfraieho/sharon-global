@@ -1,0 +1,19 @@
+{
+  "name": "_fmt_last_seen",
+  "params": "ts_str, lang: str='uk'",
+  "items": {
+    "end": {
+      "type": "end"
+    },
+    "n1": {
+      "type": "action",
+      "content": "return _fmt_last_seen_i18n(lang, ts_str)",
+      "one": "end"
+    },
+    "b0": {
+      "type": "branch",
+      "branchId": 0,
+      "one": "n1"
+    }
+  }
+}

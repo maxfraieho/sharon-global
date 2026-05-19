@@ -1,0 +1,66 @@
+{
+  "name": "send_allclear_notification",
+  "params": "cfg: dict",
+  "items": {
+    "end": {
+      "type": "end"
+    },
+    "n1": {
+      "type": "action",
+      "content": "'Send all-clear with 5-min dedup; resets threat level so next threat notifies immediately.'\nglobal _last_notify_time, _last_notify_level, _last_allclear_time, _active_threat",
+      "one": "q2"
+    },
+    "q2": {
+      "type": "question",
+      "content": "not _active_threat?",
+      "one": "n3",
+      "two": "n6"
+    },
+    "n3": {
+      "type": "action",
+      "content": "log.info('[allclear] no active threat tracked, skipping all-clear')",
+      "one": "n4"
+    },
+    "n4": {
+      "type": "action",
+      "content": "return",
+      "one": "end"
+    },
+    "n6": {
+      "type": "action",
+      "content": "import time as _t\nnow = _t.monotonic()",
+      "one": "q7"
+    },
+    "q7": {
+      "type": "question",
+      "content": "now - _last_allclear_time < _ALLCLEAR_COOLDOWN_SEC?",
+      "one": "n8",
+      "two": "n11"
+    },
+    "n8": {
+      "type": "action",
+      "content": "log.info(f'[dedup] all-clear suppressed, elapsed={now - _last_allclear_time:.0f}s')",
+      "one": "n9"
+    },
+    "n9": {
+      "type": "action",
+      "content": "return",
+      "one": "end"
+    },
+    "n11": {
+      "type": "action",
+      "content": "_last_allclear_time = now\n_last_notify_level = 0\n_last_notify_time = 0.0\ncity = cfg.get('city', 'ВашеМісто').upper()\nmsg = f'✅ *ВІДБІЙ — {city}*\\n\\nТривогу знято.'",
+      "one": "n12"
+    },
+    "n12": {
+      "type": "action",
+      "content": "try:\n    async with httpx.AsyncClient(timeout=10.0) as client:\n        resp = await client.post(f\"https://api.telegram.org/bot{cfg['bot_token']}/sendMessage\", json={'chat_id': cfg['notify_chat_id'], 'text': msg, 'parse_mode': 'Markdown'})\n        resp.raise_for_status()\n        _active_threat = False\n        _save_threat_state(False)\n        log.info('All-clear notification sent')\nexcept Exception as e:\n    log.error(f'Send all-clear error: {e}')",
+      "one": "end"
+    },
+    "b0": {
+      "type": "branch",
+      "branchId": 0,
+      "one": "n1"
+    }
+  }
+}

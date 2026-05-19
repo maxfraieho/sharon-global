@@ -1,0 +1,19 @@
+{
+  "name": "build_ai_prompt",
+  "params": "text: str, city: str, region: str",
+  "items": {
+    "end": {
+      "type": "end"
+    },
+    "n1": {
+      "type": "action",
+      "content": "return f\"\"\"Ти класифікатор повідомлень про повітряні загрози.\\nМісто: {city} ({region}).\\n\\nПравила:\\n- threat=true: АКТИВНА загроза БПЛА або ракетна атака прямо зараз\\n- threat=false: відбій тривоги, кінець тривоги, зняття тривоги\\n- ВАЖЛИВО: слова 'відбій', 'відбій тривоги' = threat=false\\n\\nВідповідь ТІЛЬКИ JSON без markdown:\\n{{\"threat\": true, \"reason\": \"БПЛА атака підтверджена\"}}\\n\\nПовідомлення:\\n{text}\"\"\"",
+      "one": "end"
+    },
+    "b0": {
+      "type": "branch",
+      "branchId": 0,
+      "one": "n1"
+    }
+  }
+}

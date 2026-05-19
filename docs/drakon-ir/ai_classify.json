@@ -1,0 +1,45 @@
+{
+  "name": "ai_classify",
+  "params": "text: str, cfg: dict",
+  "items": {
+    "end": {
+      "type": "end"
+    },
+    "n1": {
+      "type": "action",
+      "content": "'Ask AI: is this a UAV threat for the configured city?'\ncity = cfg.get('city', 'Олександрія')\nregion = cfg.get('city_region', 'Кіровоградська область')\ncity_keywords = cfg.get('city_keywords', [city])\nkw_result, kw_reason = keyword_classify(text, city_keywords)",
+      "one": "q2"
+    },
+    "q2": {
+      "type": "question",
+      "content": "kw_result is not None?",
+      "one": "n3",
+      "two": "n6"
+    },
+    "n3": {
+      "type": "action",
+      "content": "log.info(f'Keyword pre-classify: threat={kw_result}, reason={kw_reason}')",
+      "one": "n4"
+    },
+    "n4": {
+      "type": "action",
+      "content": "return (kw_result, kw_reason)",
+      "one": "end"
+    },
+    "n6": {
+      "type": "action",
+      "content": "prompt = build_ai_prompt(text, city, region)",
+      "one": "n7"
+    },
+    "n7": {
+      "type": "action",
+      "content": "try:\n    _llm_url = cfg.get('llm_proxy_url') or cfg.get('goclaw_url', '')\n    if _llm_url and (not _llm_url.rstrip('/').endswith('/chat/completions')):\n        _llm_url = _llm_url.rstrip('/') + '/chat/completions'\n    async with httpx.AsyncClient(timeout=15.0) as client:\n        resp = await client.post(_llm_url, headers={'Authorization': f\"Bearer {cfg.get('llm_proxy_token') or cfg.get('goclaw_api_key', '')}\", 'Content-Type': 'application/json'}, json={'model': cfg.get('llm_proxy_model') or cfg.get('goclaw_model', ''), 'messages': [{'role': 'user', 'content': prompt}], 'max_tokens': 120, 'temperature': 0})\n        resp.raise_for_status()\n        content = resp.json()['choices'][0]['message']['content'].strip()\n        content = re.sub('^```(?:json)?\\\\s*|\\\\s*```$', '', content, flags=re.MULTILINE).strip()\n        result = json.loads(content)\n        return (result.get('threat', False), result.get('reason', ''))\nexcept Exception as e:\n    log.error(f'AI classify error: {e}')\n    return (False, '')",
+      "one": "end"
+    },
+    "b0": {
+      "type": "branch",
+      "branchId": 0,
+      "one": "n1"
+    }
+  }
+}
